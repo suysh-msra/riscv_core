@@ -5,13 +5,13 @@
 module ex_mem_reg (
   input         clk,
   input         rst_n,
-  input  [31:0] alu_res_in, st_dat_in,
-  input  [4:0]  wr_reg_in,
+  input  [31:0] alu_res_in, st_dat_in,//calculated  esult /addr
+  input  [4:0]  wr_reg_in,//destination register address
   input         reg_wr_in, mem_rd_in, mem_wr_in, mem_to_reg_in,
-
+                //RegWrite, MemRd, MemWr, and Mem2Reg Ctrl signals, 
   output [31:0] alu_res_out, st_dat_out,
   output [4:0]  wr_reg_out,
-  output        reg_wr_out, mem_rd_out, mem_wr_out, mem_to_reg_out
+  output        reg_wr_out, mem_rd_out, mem_wr_out, mem_to_reg_out //inputs to MEM stage
 );
   logic [31:0] alu_res_r, st_dat_r;
   logic [4:0]  wr_reg_r;
