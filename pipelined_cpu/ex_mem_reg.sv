@@ -21,7 +21,7 @@ module ex_mem_reg (
     if (!rst_n) begin
       alu_res_r    <=  0 ;
       st_dat_r     <=   0;
-      wr_reg_r     <=   0;
+      wr_reg_r     <=   0;//i understand regWrite but what is this
       reg_wr_r     <=   0;
       mem_rd_r     <=   0;
       mem_wr_r     <=   0;
