@@ -145,11 +145,51 @@ module pipelined_cpu(
   wire pred_takn;
   wire bp_update, bp_actual_takn;
 
-  branch_pred_2bit u_bra_pred (
-    .clk          (clk),
-    .rst_n        (rst_n),
-    .brat         (bp_actual_takn),
-    .pred_takn)   (pred_takn)
+  branch_predictor_2bit u_bra_pred (
+    .clk           (clk),
+    .rst_n         (rst_n),
+    .update        (bp_update),
+    .branch_taken  (bp_actual_takn),
+    .predict_taken (pred_takn)
+  ); 
+
+  wire id_branch_redirect = id_bra && pred_takn;
+  wire id_jump_redirect   = id_jump;
+  assign id_redirect      = id_branch_redirect || id_jump_indirect;
+  assign id_redirect_pc   = id_jump_redirect ? id_jump_tgt : id_brat;
+
+  //hazard detection against the instruction currently in EX (ID/X reg outputs, )
+
+  wire ex_mem_rd;
+  wire [4:0] ex_wr_reg;
+
+  hazard_detect u_hazard (
+    .id_opcode    (id_opcode),
+    .id_rs1       (id_rs1),
+    .id_rs2       (id_rs2),
+    .ex_mem_rd    (ex_mem_rd),
+    .ex_wr_reg    (ex_wr_reg),
+    .stall        (hazard_stall)
   );
+
+  //bubbled by either a load-use stall (delays this ID-stqage ionstr by once cycle) or an ESX stage mispred flush (discards
+  //this ID stage instr outright)
+  wire id_ex_bubble = hazard_stall || ex_flush;
+
+  wire [31:0] ex_rd_data1, ex_rd_data2, ex_sext_imm;
+  wire [31:0] ex_pc_plus4, ex_bra_tgt;
+  wire [4:0]  ex_rs1, ex_rs2;
+  wire        ex_reg_wr, ex_mem_wr, ex_mem2reg;
+  wire        ex_alu_src, ex_branch, ex_pred_takn;
+  wire [2:0]  ex_alu_ctrl;
+
+  id_ex_reg u_id_ex (
+    .clk                (clk),
+    .rst_n              (rst_n),
+    .bubble             (id_ex_bubble),
+    .rd_data1_in        (id_rd_data1),
+    .rd_data2_in        (id_rd_data2),
+    //continue
+  
   //continue 
   
