@@ -87,4 +87,69 @@ module pipelined_cpu(
   wire id_mem_rd, id_mem_wr, id_bra, id_jump;
   wire id_alu_ctrl;
 
-  control_unit u_ctrl //;///lemme quickly check
+  control_unit u_control (
+    .opcode      (id_opcode),
+    .funct3      (id_funct3),
+    .funct7      (id_funct7),
+    .alu_src     (id_alu_src),
+    .mem2reg     (id_mem2reg),
+    .reg_wr      (id_reg_wr),
+    .mem_rd      (id_mem_rd),
+    .mem_wr      (id_mem_wr),
+    .bra         (id_bra),
+    .jump        (id_jump),
+    .alu_ctrl    (id_alu_ctrl)
+  );
+
+  //rd sits at the same bit position in RV32I
+
+  wire [4:0] id_wr_reg = id_rd;
+
+  //WB stage signals
+  wire [31:0] wb_write_back_data;
+  wire [4:0]  wb_wr_reg;
+  wire        wb_reg_wr;
+
+  wire [31:0] id_rd_data1, id_rd_data2;
+
+  regfile u_regfile (
+    .clk         (clk),
+    .rst_n       (rst_n),
+    .rd_reg1     (id_rs1),
+    .rd_reg2     (id_rs2),
+    .wr_reg      (wb_wr_reg),
+    .wr_data     (wb_write_back_data),
+    .wr_en       (wb_reg_wr),
+    .rd_data1    (id_rd_data1),
+    .rd_data2    (id_rd_data2)
+  );
+
+  //the four RV32I fmts this ISA subset  needs.
+  //byte granular: bit 0 forced 0, doesnt need a lftshft. b and j type instrs
+  wire [31:0] id_imm_i = {{20{id_instr[31]}}, id_instr[31:20]};
+  wire [31:0] id_imm_s = {{20{id_instr[31]}}, id_instr[31:25], id_instr[11:7]};
+  wire [31:0] id_imm_b = {{19{id_instr[31]}}, id_instr[31], id_intr[7], 
+                          id_instr[30:25], id_instr[11:8], 1'b0}; //i dont get this
+  wire [31:0] id_imm_j = {{11{id_instr[31]}}, id_instr[31], id_instr[19:12],
+                          id_instr[20], id_instr[30:21], 1'b0};
+
+  //alu operand immediate: addi/lw use the I fmt, sw uses the S fmt (the field layout differs).
+  // id_mem_wr uniquely selects sw among everything that sets alu_src, so no separate selctor sig is needed
+
+  
+  wire [31:0] id_sext_imm = id_mem_wr ? id_imm_s : id_imm_i;
+  wire [31:0] id_brat     = id_pc + id_imm_b;
+  wire [31:0] id_jump_tgt = id_pc + id_imm_j;
+
+  //branch prediction: read this cycle's global couner state for whichever instruction is in ID; EX trains it
+  wire pred_takn;
+  wire bp_update, bp_actual_takn;
+
+  branch_pred_2bit u_bra_pred (
+    .clk          (clk),
+    .rst_n        (rst_n),
+    .brat         (bp_actual_takn),
+    .pred_takn)   (pred_takn)
+  );
+  //continue 
+  
