@@ -49,5 +49,42 @@ module pipelined_cpu(
 
   instr_mem u_instr_mem (.addr(pc), .instr(if_instr)); //
 
+  /*
+  //flush on either redirect source; hazard stall can never be true in the same cycle as ex_flush (they key off ID/EX's single current 
+  //instruction , which can't simiultaneously be a ld and a branch). but flush is checked first in if_id_reg regardless, so the priority 
+  is unambiguous even if that ever changed.
+  */
+
+  wire if_id_flush = ex_flush || id_redirect;
+
+  logic [31:0] id_pc, id_pc_plus4, id_instr;
+
+  if_id_reg u_if_id (
+    .clk           (clk),
+    .rst_n         (rst_n),
+    .stall         (hazard_stall),
+    .flush         (if_id_flush),
+    .pc_in         (pc),
+    .pc_plus4_in   (pc_plus4),
+    .instr_in      (if_instr),
+    .pc_out        (id_pc),
+    .pc_plus4_out  (id_pc_plus4),
+    .instr_out     (id_instr)
+  );
   /*?* fi;;;ll the rest later*/
-  
+
+
+  //ID Stage
+
+  wire [6:0] id_opcode = id_instr[6:0];
+  wire [4:0] id_rd     = id_instr[11:7];
+  wire [2:0] id_funct3 = id_instr[14:12];
+  wire [4:0] id_rs1    = id_instr[19:15];
+  wire [4:0] id_rs2    = id_instr[24:20];
+  wire [6:0] id_funct7 = id_instr[31:25];
+
+  wire id_alu_src, id_mem2reg, id_reg_wr;
+  wire id_mem_rd, id_mem_wr, id_bra, id_jump;
+  wire id_alu_ctrl;
+
+  control_unit u_ctrl //;///lemme quickly check
