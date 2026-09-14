@@ -125,7 +125,27 @@ module pipelined_cpu(
   );
 
   //the four RV32I fmts this ISA subset  needs.
-  //byte granular: bit 0 forced 0, doesnt need a lftshft. b and j type instrs
+  /*
+  bit  31        25 | 24      20 | 19      15 | 14    12 | 11    7 | 6      0 |
+          funct7          rs2          rs1       funct3       rd      opcode
+
+          opcode is "broad" class of instr, funct3 is specific op within this class, funct7 is even more granular (think add v sub).
+          rsX/rd are 5 bits because 32 regs.
+          an instr that does not need one of these gets to use it for immediate bits instead.
+           addi ex: addi x5, x6, -3
+           [31:20] (funct7 and rs2): vacant, used for immediate value -3. rs1 is x6, [19:15] is 00110. 14:12 is ADD: 000. 
+           rd is x5, so [11:7] is 00101. OP-IMM is 0010011.
+           sw x7, 20 (x8) needs two sources (base addr and value to store),, but produces no result. rd and funct7 are vacant, used for
+           encoding the 20.
+           [24:20] = 00111. [19:15] = 01000. [14:12] 010 (SW). [6:0] 0100011 (STORE).
+           
+  */
+  //byte granular: bit 0 forced 0, because branch anbd jump offsets are always even, as riscv instr are 2 byte aligned.
+  // doesnt need a lftshft. b and j type instrs/
+  //they look scrambled because riscv intentionally scrambles htem
+  //id_imm_i , I type, 12 bit signed, used by addi, lw, jalr - operand or addr offset
+  //the Nx31 is sign extension.
+  //rs1 is at ins[19:15], rs2 at ins[24:20], rd at ins[11:7].
   wire [31:0] id_imm_i = {{20{id_instr[31]}}, id_instr[31:20]};
   wire [31:0] id_imm_s = {{20{id_instr[31]}}, id_instr[31:25], id_instr[11:7]};
   wire [31:0] id_imm_b = {{19{id_instr[31]}}, id_instr[31], id_intr[7], 
